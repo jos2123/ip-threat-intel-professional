@@ -6,7 +6,7 @@ async function analyzeIPs() {
   const btn = document.getElementById('analyzeBtn');
 
   if (!input) {
-    showError('Por favor ingrese al menos una dirección IP');
+    showError('⚠️ Por favor ingrese al menos una dirección IP para continuar');
     return;
   }
 
