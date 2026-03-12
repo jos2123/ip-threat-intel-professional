@@ -532,13 +532,13 @@ async function showBlockedList() {
       html += `
         <div class="blocked-controls">
           <button onclick="showLastResults()" style="background: #17a2b8; margin-right: 10px;">🔙 Volver a Resultados</button>
-          <button onclick="showAWSFormat()" style="background: #f39c12;">📋 Formato AWS WAF</button>
+          <button onclick="showAWSFormat()" style="background: #f39c12;">Formato AWS WAF</button>
         </div>
       `;
     } else {
       html += `
         <div class="blocked-controls">
-          <button onclick="showAWSFormat()" style="background: #f39c12; margin-bottom: 20px;">📋 Formato AWS WAF</button>
+          <button onclick="showAWSFormat()" style="background: #f39c12; margin-bottom: 20px;">Formato AWS WAF</button>
         </div>
       `;
     }
@@ -579,22 +579,47 @@ function showLastResults() {
 
 async function showAWSFormat() {
   try {
-    const response = await fetch('/api/blocked-aws');
-    const awsText = await response.text();
+    const response = await fetch('/api/generate-blocklist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ formatted: true })
+    });
     
-    let html = `
-      <h2>📋 Formato AWS WAF</h2>
-      <p>Copia y pega estas IPs/rangos en AWS WAF:</p>
+    const data = await response.json();
+    
+    const html = `
+      <h2>Formato AWS WAF</h2>
+      <p>Copie y pegue estas IPs/rangos en AWS WAF:</p>
+      
       <div class="aws-format">
-        <textarea readonly style="width: 100%; height: 300px; font-family: monospace;">${awsText}</textarea>
-        <button onclick="copyToClipboard('${awsText.replace(/'/g, "\\'")}')">📋 Copiar</button>
+        <textarea readonly rows="15" style="width: 100%; font-family: monospace; padding: 15px; border: 1px solid #ddd; border-radius: 4px;">${data.blocklist}</textarea>
+        <div style="margin-top: 15px; text-align: center;">
+          <button onclick="copyAWSList()" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Copiar Lista</button>
+          <button onclick="showBlockedList()" style="background: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Volver a Lista</button>
+        </div>
       </div>
-      <button onclick="showBlockedList()" style="margin-top: 15px;">← Volver a Lista</button>
     `;
     
     document.getElementById('results').innerHTML = html;
+    
+    // Guardar para función de copiar
+    window.awsBlocklist = data.blocklist;
   } catch (error) {
-    alert(`❌ Error: ${error.message}`);
+    showError(`Error al generar formato AWS: ${error.message}`);
+  }
+}
+
+function copyAWSList() {
+  if (window.awsBlocklist) {
+    navigator.clipboard.writeText(window.awsBlocklist).then(() => {
+      showAlert('Lista copiada al portapapeles', 'success');
+    }).catch(() => {
+      // Fallback para navegadores antiguos
+      const textarea = document.querySelector('.aws-format textarea');
+      textarea.select();
+      document.execCommand('copy');
+      showAlert('Lista copiada al portapapeles', 'success');
+    });
   }
 }
 
