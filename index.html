@@ -3,25 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IP Threat Intelligence Dashboard - Professional</title>
+    <title>Sistema de Inteligencia de Amenazas IP</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🔥 IP THREAT INTELLIGENCE SYSTEM - PROFESSIONAL 🔥</h1>
-            <p>Advanced IP Address Analysis and Threat Detection Platform</p>
-            <p><small>Enter multiple IP addresses (one per line) or use Ctrl+Enter to analyze</small></p>
+            <h1>Sistema de Inteligencia de Amenazas IP</h1>
+            <p>Plataforma Avanzada de Análisis y Detección de Amenazas</p>
+            <p><small>Ingrese múltiples direcciones IP (una por línea) o use Ctrl+Enter para analizar</small></p>
         </header>
 
         <div class="search-box">
             <div class="input-group">
-                <textarea id="ipInput" placeholder="Enter IP addresses separated by lines or commas:&#10;8.8.8.8, 1.1.1.1&#10;or&#10;8.8.8.8&#10;1.1.1.1" rows="4"></textarea>
-                <button id="analyzeBtn" onclick="analyzeIPs()">Analyze</button>
+                <textarea id="ipInput" placeholder="Ingrese direcciones IP separadas por líneas o comas:
+8.8.8.8, 1.1.1.1
+o
+8.8.8.8
+1.1.1.1" rows="4"></textarea>
+                <button id="analyzeBtn" onclick="analyzeIPs()">Analizar</button>
             </div>
             <div style="margin-top: 15px; text-align: center;">
-                <button onclick="showBlockedList()" style="background: #dc3545; padding: 10px 20px;">View Blocked List</button>
-                <button onclick="generateBlocklist()" style="background: #6c757d; padding: 10px 20px; margin-left: 10px;">Generate AWS List</button>
+                <button onclick="showBlockedList()" style="background: #dc3545; padding: 10px 20px;">Ver Lista Bloqueada</button>
+                <button onclick="generateBlocklist()" style="background: #6c757d; padding: 10px 20px; margin-left: 10px;">Generar Lista AWS</button>
             </div>
         </div>
 

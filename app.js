@@ -6,7 +6,7 @@ async function analyzeIPs() {
   const btn = document.getElementById('analyzeBtn');
 
   if (!input) {
-    showError('🚨 PLEASE ENTER AT LEAST ONE IP ADDRESS 🚨');
+    showError('Por favor ingrese al menos una dirección IP');
     return;
   }
 
@@ -16,7 +16,7 @@ async function analyzeIPs() {
     .filter(ip => ip && ip.length > 0);
 
   if (ips.length === 0) {
-    showError('No valid IPs found');
+    showError('No se encontraron IPs válidas');
     return;
   }
 
@@ -424,6 +424,19 @@ function showAlert(message, type = 'info') {
       alert.remove();
     }
   }, 4000);
+  
+  // Remover al hacer click en el input
+  const input = document.getElementById('ipInput');
+  const removeAlert = () => {
+    if (alert.parentNode) {
+      alert.remove();
+    }
+    input.removeEventListener('click', removeAlert);
+    input.removeEventListener('focus', removeAlert);
+  };
+  
+  input.addEventListener('click', removeAlert);
+  input.addEventListener('focus', removeAlert);
 }
 
 document.getElementById('ipInput').addEventListener('keypress', (e) => {
