@@ -619,7 +619,7 @@ function copyToClipboard(text) {
 async function generateBlocklist() {
   const input = document.getElementById('ipInput').value.trim();
   if (!input) {
-    alert('❌ Ingresa las IPs primero');
+    showError('⚠️ Por favor ingrese al menos una dirección IP para continuar');
     return;
   }
 
