@@ -1,16 +1,5 @@
 // Cloudflare Pages Function
-export async function onRequestGet(context) {
-  const { request, env } = context;
-  const url = new URL(request.url);
-  const ip = url.searchParams.get('ip');
-
-  if (!ip) {
-    return new Response(JSON.stringify({ error: 'IP required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
+async function analyzeIP(ip, env) {
   try {
     // AbuseIPDB
     const abuseResponse = await fetch(`https://api.abuseipdb.com/api/v2/check?ipAddress=${ip}`, {
@@ -85,10 +74,60 @@ export async function onRequestGet(context) {
       }
     };
 
+    return result;
+
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function onRequestGet(context) {
+  const { request, env } = context;
+  const url = new URL(request.url);
+  const ip = url.searchParams.get('ip');
+
+  if (!ip) {
+    return new Response(JSON.stringify({ error: 'IP required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  try {
+    const result = await analyzeIP(ip, env);
     return new Response(JSON.stringify(result), {
       headers: { 
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
+      }
+    });
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+export async function onRequestPost(context) {
+  const { request, env } = context;
+  
+  try {
+    const { ip } = await request.json();
+    
+    if (!ip) {
+      return new Response(JSON.stringify({ error: 'IP required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
+    const result = await analyzeIP(ip, env);
+    return new Response(JSON.stringify(result), {
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'no-cache'
       }
     });
 
