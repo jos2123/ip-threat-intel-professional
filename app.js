@@ -633,10 +633,29 @@ async function generateBlocklist() {
   }
 
   try {
+    // Primero analizar las IPs para obtener su nivel de riesgo
+    const analyzed = await Promise.all(ips.map(async (ip) => {
+      try {
+        const response = await fetch('/api/analyze-ip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ip })
+        });
+        const data = await response.json();
+        return {
+          ip: ip,
+          riskLevel: data.reputation?.riskLevel || 'low'
+        };
+      } catch (error) {
+        return { ip: ip, riskLevel: 'low' };
+      }
+    }));
+    
+    // Generar blocklist con los datos analizados
     const response = await fetch('/api/generate-blocklist', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ips })
+      body: JSON.stringify({ analyzed })
     });
 
     const result = await response.json();
