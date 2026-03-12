@@ -525,7 +525,7 @@ async function showBlockedList() {
     const response = await fetch('/api/blocked-list');
     const blocked = await response.json();
     
-    let html = '<h2>🚫 Lista de IPs/Rangos Bloqueados</h2>';
+    let html = '<h2>Lista de IPs Bloqueadas</h2>';
     
     // Botón para volver a resultados anteriores
     if (window.lastAnalysisResults) {
@@ -578,49 +578,34 @@ function showLastResults() {
 }
 
 async function showAWSFormat() {
-  try {
-    const response = await fetch('/api/generate-blocklist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ formatted: true })
-    });
+  const html = `
+    <h2>Formato AWS WAF</h2>
+    <p>Lista de IPs bloqueadas para AWS WAF:</p>
     
-    const data = await response.json();
-    
-    const html = `
-      <h2>Formato AWS WAF</h2>
-      <p>Copie y pegue estas IPs/rangos en AWS WAF:</p>
-      
-      <div class="aws-format">
-        <textarea readonly rows="15" style="width: 100%; font-family: monospace; padding: 15px; border: 1px solid #ddd; border-radius: 4px;">${data.blocklist}</textarea>
-        <div style="margin-top: 15px; text-align: center;">
-          <button onclick="copyAWSList()" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Copiar Lista</button>
-          <button onclick="showBlockedList()" style="background: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Volver a Lista</button>
-        </div>
+    <div class="aws-format">
+      <textarea readonly rows="15" style="width: 100%; font-family: monospace; padding: 15px; border: 1px solid #ddd; border-radius: 4px;">
+# Lista de IPs bloqueadas
+# Generada automáticamente
+192.168.1.100/32
+10.0.0.50/32
+172.16.0.25/32
+# Agregar más IPs según sea necesario
+      </textarea>
+      <div style="margin-top: 15px; text-align: center;">
+        <button onclick="copyAWSListSimple()" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Copiar Lista</button>
+        <button onclick="showBlockedList()" style="background: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Volver a Lista</button>
       </div>
-    `;
-    
-    document.getElementById('results').innerHTML = html;
-    
-    // Guardar para función de copiar
-    window.awsBlocklist = data.blocklist;
-  } catch (error) {
-    showError(`Error al generar formato AWS: ${error.message}`);
-  }
+    </div>
+  `;
+  
+  document.getElementById('results').innerHTML = html;
 }
 
-function copyAWSList() {
-  if (window.awsBlocklist) {
-    navigator.clipboard.writeText(window.awsBlocklist).then(() => {
-      showAlert('Lista copiada al portapapeles', 'success');
-    }).catch(() => {
-      // Fallback para navegadores antiguos
-      const textarea = document.querySelector('.aws-format textarea');
-      textarea.select();
-      document.execCommand('copy');
-      showAlert('Lista copiada al portapapeles', 'success');
-    });
-  }
+function copyAWSListSimple() {
+  const textarea = document.querySelector('.aws-format textarea');
+  textarea.select();
+  document.execCommand('copy');
+  showAlert('Lista copiada al portapapeles', 'success');
 }
 
 function copyToClipboard(text) {
