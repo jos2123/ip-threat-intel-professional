@@ -70,7 +70,8 @@ export async function onRequestGet(context) {
           harmless: vtData.data?.attributes?.last_analysis_stats?.harmless || 0
         },
         riskLevel: abuseData.data?.abuseConfidenceScore > 50 ? 'high' : 
-                   abuseData.data?.abuseConfidenceScore > 25 ? 'medium' : 'low'
+                   abuseData.data?.abuseConfidenceScore > 25 ? 'medium' : 'low',
+        riskScore: abuseData.data?.abuseConfidenceScore || 0
       },
       intelligence: {
         shodan: shodanData ? {
