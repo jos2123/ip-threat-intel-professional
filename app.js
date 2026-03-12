@@ -634,6 +634,7 @@ async function generateBlocklist() {
 
   try {
     // Primero analizar las IPs para obtener su nivel de riesgo
+    console.log('🔍 Analizando IPs:', ips);
     const analyzed = await Promise.all(ips.map(async (ip) => {
       try {
         const response = await fetch('/api/analyze-ip', {
@@ -642,14 +643,19 @@ async function generateBlocklist() {
           body: JSON.stringify({ ip })
         });
         const data = await response.json();
-        return {
+        const result = {
           ip: ip,
           riskLevel: data.reputation?.riskLevel || 'low'
         };
+        console.log(`📊 ${ip} → ${result.riskLevel.toUpperCase()}`);
+        return result;
       } catch (error) {
+        console.error(`❌ Error analizando ${ip}:`, error);
         return { ip: ip, riskLevel: 'low' };
       }
     }));
+    
+    console.log('📋 Datos analizados:', analyzed);
     
     // Generar blocklist con los datos analizados
     const response = await fetch('/api/generate-blocklist', {
@@ -659,6 +665,7 @@ async function generateBlocklist() {
     });
 
     const result = await response.json();
+    console.log('✅ Resultado AWS WAF:', result);
     
     let html = `
       <h2>📋 Lista de Bloqueo AWS WAF</h2>
@@ -674,6 +681,7 @@ async function generateBlocklist() {
     document.getElementById('results').innerHTML = html;
     document.getElementById('results').style.display = 'block';
   } catch (error) {
+    console.error('❌ Error completo:', error);
     alert(`❌ Error: ${error.message}`);
   }
 }
