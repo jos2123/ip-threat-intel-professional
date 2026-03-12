@@ -25,19 +25,51 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
-  const { request } = context;
+  const { request, env } = context;
   
   try {
     const { ips } = await request.json();
     
-    // Generar formato AWS WAF basado en las IPs enviadas
-    const awsIPs = ips.map(ip => `${ip}/32`);
-    const formatted = awsIPs.join('\n');
+    // Analizar cada IP para determinar su nivel de riesgo
+    const awsIPs = await Promise.all(ips.map(async (ip) => {
+      try {
+        // Consultar AbuseIPDB para obtener el score
+        const abuseResponse = await fetch(
+          `https://api.abuseipdb.com/api/v2/check?ipAddress=${ip}`,
+          {
+            headers: {
+              'Key': env.ABUSEIPDB_KEY,
+              'Accept': 'application/json'
+            }
+          }
+        );
+        
+        const abuseData = await abuseResponse.json();
+        const score = abuseData.data?.abuseConfidenceScore || 0;
+        
+        // Aplicar regla: LOW = /32, MEDIUM/HIGH = /24
+        if (score > 25) {
+          // MEDIUM o HIGH: usar subnet /24
+          const subnet = ip.split('.').slice(0, 3).join('.') + '.0';
+          return `${subnet}/24`;
+        } else {
+          // LOW: usar IP individual /32
+          return `${ip}/32`;
+        }
+      } catch (error) {
+        // Si falla la consulta, usar /32 por defecto
+        return `${ip}/32`;
+      }
+    }));
+    
+    // Eliminar duplicados
+    const uniqueIPs = [...new Set(awsIPs)];
+    const formatted = uniqueIPs.join('\n');
     
     const result = {
-      individual: awsIPs,
-      subnets: [],
-      total: awsIPs.length,
+      individual: uniqueIPs.filter(ip => ip.endsWith('/32')),
+      subnets: uniqueIPs.filter(ip => ip.endsWith('/24')),
+      total: uniqueIPs.length,
       formatted: formatted
     };
 
