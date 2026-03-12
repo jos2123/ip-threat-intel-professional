@@ -1,8 +1,8 @@
 // Cloudflare Pages Function
 async function analyzeIP(ip, env) {
   try {
-    // AbuseIPDB
-    const abuseResponse = await fetch(`https://api.abuseipdb.com/api/v2/check?ipAddress=${ip}`, {
+    // AbuseIPDB - Solicitar datos de 90 días y verbose para más información
+    const abuseResponse = await fetch(`https://api.abuseipdb.com/api/v2/check?ipAddress=${ip}&maxAgeInDays=90&verbose`, {
       headers: {
         'Key': env.ABUSEIPDB_KEY,
         'Accept': 'application/json'
