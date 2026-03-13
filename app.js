@@ -371,6 +371,23 @@ function displayResults(data) {
       </div>
 
       <div class="card">
+        <h3>☁️ Cloudflare Radar - Bot vs Human</h3>
+        ${data.intelligence.cloudflare ? `
+          <div class="info-row">
+            <span class="label">Bot (automated):</span>
+            <span class="badge badge-danger">${data.intelligence.cloudflare.bot}%</span>
+          </div>
+          <div class="info-row">
+            <span class="label">Human:</span>
+            <span class="badge badge-success">${data.intelligence.cloudflare.human}%</span>
+          </div>
+          <div style="margin-top: 10px; padding: 8px; background: #f5f5f5; border-radius: 4px; font-size: 0.85em;">
+            📊 Estadísticas de tráfico HTTP del ASN ${data.basic?.asn} en los últimos 7 días
+          </div>
+        ` : '<p>Not available</p>'}
+      </div>
+
+      <div class="card">
         <h3>🔗 AlienVault OTX</h3>
         ${data.reputation.otx ? createInfoRows({
           'Pulses': data.reputation.otx.pulseCount,
