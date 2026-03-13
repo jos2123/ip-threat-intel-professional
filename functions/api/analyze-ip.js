@@ -40,20 +40,22 @@ async function analyzeIP(ip, env) {
     const asn = ipinfoData.org?.split(' ')[0]?.replace('AS', '');
     if (asn && env.CLOUDFLARE_API_TOKEN) {
       try {
+        console.log(`Fetching Cloudflare stats for ASN: ${asn}`);
         const cfResponse = await fetch(`https://api.cloudflare.com/client/v4/radar/http/summary/bot_class?asn=${asn}&dateRange=7d`, {
           headers: {
             'Authorization': `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
             'Content-Type': 'application/json'
           }
         });
-        if (cfResponse.ok) {
-          const cfData = await cfResponse.json();
-          if (cfData.success && cfData.result?.summary_0) {
-            cloudflareStats = {
-              bot: Math.round(parseFloat(cfData.result.summary_0.bot || 0)),
-              human: Math.round(parseFloat(cfData.result.summary_0.human || 0))
-            };
-          }
+        const cfData = await cfResponse.json();
+        console.log('Cloudflare response:', JSON.stringify(cfData));
+        
+        if (cfData.success && cfData.result?.summary_0) {
+          cloudflareStats = {
+            bot: Math.round(parseFloat(cfData.result.summary_0.bot || 0)),
+            human: Math.round(parseFloat(cfData.result.summary_0.human || 0)),
+            asn: asn
+          };
         }
       } catch (e) {
         console.log('Cloudflare Radar error:', e);
