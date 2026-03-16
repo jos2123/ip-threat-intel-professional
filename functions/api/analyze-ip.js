@@ -1,7 +1,7 @@
 // Cloudflare Pages Function
 async function analyzeIP(ip, env) {
   try {
-    // AbuseIPDB - Solicitar datos de 90 días y verbose para más información
+    // AbuseIPDB - API data
     const abuseResponse = await fetch(`https://api.abuseipdb.com/api/v2/check?ipAddress=${ip}&maxAgeInDays=90&verbose`, {
       headers: {
         'Key': env.ABUSEIPDB_KEY,
@@ -9,6 +9,23 @@ async function analyzeIP(ip, env) {
       }
     });
     const abuseData = await abuseResponse.json();
+
+    // AbuseIPDB - Scrape total reports from public page
+    let totalReportsAllTime = null;
+    try {
+      const scrapeResponse = await fetch(`https://www.abuseipdb.com/check/${ip}`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+      const html = await scrapeResponse.text();
+      const match = html.match(/was reported (\d+) times/i);
+      if (match) {
+        totalReportsAllTime = parseInt(match[1]);
+      }
+    } catch (e) {
+      console.log('Scrape error:', e);
+    }
 
     // VirusTotal
     const vtResponse = await fetch(`https://www.virustotal.com/api/v3/ip_addresses/${ip}`, {
@@ -77,13 +94,13 @@ async function analyzeIP(ip, env) {
         abuseipdb: {
           score: abuseData.data?.abuseConfidenceScore || 0,
           reports: abuseData.data?.totalReports || 0,
+          totalReportsAllTime: totalReportsAllTime,
           isp: abuseData.data?.isp || 'Unknown',
           usageType: abuseData.data?.usageType || 'Unknown',
           domain: abuseData.data?.domain || 'N/A',
           hostnames: abuseData.data?.hostnames || [],
           isWhitelisted: abuseData.data?.isWhitelisted || false,
-          lastReported: abuseData.data?.lastReportedAt || null,
-          note: 'Reports limited to last 90 days (API Free plan)'
+          lastReported: abuseData.data?.lastReportedAt || null
         },
         virustotal: {
           malicious: vtData.data?.attributes?.last_analysis_stats?.malicious || 0,
