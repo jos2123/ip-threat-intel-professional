@@ -1,38 +1,31 @@
 async function analyzeIPs() {
   const input = document.getElementById('ipInput').value.trim();
   const loading = document.getElementById('loading');
-  const error = document.getElementById('error');
   const results = document.getElementById('results');
   const btn = document.getElementById('analyzeBtn');
 
   if (!input) {
-    showError('⚠️ Por favor ingrese al menos una dirección IP para continuar');
+    showToast('Please enter at least one IP address', 'error');
     return;
   }
 
-  // Separar IPs por líneas o comas y limpiar
-  const ips = input.split(/[\n,]/)
-    .map(ip => ip.trim())
-    .filter(ip => ip && ip.length > 0);
+  const ips = input.split(/[\n,]/).map(ip => ip.trim()).filter(ip => ip);
 
   if (ips.length === 0) {
-    showError('No se encontraron IPs válidas');
+    showToast('No valid IP addresses found', 'error');
     return;
   }
 
   loading.style.display = 'block';
-  error.style.display = 'none';
   results.style.display = 'none';
   btn.disabled = true;
 
   try {
-    // Analizar todas las IPs en paralelo
     const promises = ips.map(ip => analyzeIP(ip));
     const allResults = await Promise.allSettled(promises);
-
-    displayMultipleResults(allResults, ips);
+    displayResults(allResults, ips);
   } catch (err) {
-    showError(err.message);
+    showToast(err.message, 'error');
   } finally {
     loading.style.display = 'none';
     btn.disabled = false;
@@ -42,18 +35,19 @@ async function analyzeIPs() {
 async function analyzeIP(ip) {
   const response = await fetch(`/api/analyze-ip?ip=${ip}`);
   const data = await response.json();
-  
   if (!response.ok) throw new Error(`${ip}: ${data.error}`);
-  
   return data;
 }
 
-function displayMultipleResults(results, ips) {
+function displayResults(results, ips) {
   const resultsDiv = document.getElementById('results');
-  let html = `<h2>Analysis Results (${ips.length} IPs)</h2>
-    <div style="text-align: center; margin-bottom: 20px;">
-      <button onclick="generatePDF()" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">Generate Report</button>
-    </div>`;
+  
+  let html = `
+    <div class="results-header">
+      <h2>Analysis Results (${ips.length} IPs)</h2>
+      <button class="btn-export" onclick="generatePDF()">Export Report</button>
+    </div>
+  `;
 
   results.forEach((result, index) => {
     const ip = ips[index];
@@ -61,408 +55,233 @@ function displayMultipleResults(results, ips) {
     if (result.status === 'fulfilled') {
       const data = result.value;
       
-      // Verificar si es IP reservada
       if (data.reserved) {
-        html += `
-          <div class="ip-result reserved">
-            <div class="risk-indicator risk-reserved">
-              RESERVED ${data.ip} - ${data.reservedType.toUpperCase()}
-            </div>
-            
-            <div class="reserved-info">
-              <h3>Important Information</h3>
-              <p><strong>Message:</strong> ${data.message}</p>
-              <p><strong>Note:</strong> ${data.note}</p>
-            </div>
-            
-            <div class="grid">
-              <div class="card">
-                <h3>Basic Information</h3>
-                ${createInfoRows({
-                  'Type': data.reservedType.replace('_', ' ').toUpperCase(),
-                  'Organization': data.basic?.organization || 'N/A',
-                  'Status': 'Reserved/Private IP'
-                })}
-              </div>
-            </div>
-          </div>
-        `;
+        html += renderReservedIP(data);
       } else if (data.blocked) {
-        html += `
-          <div class="ip-result blocked">
-            <div class="risk-indicator risk-high">
-              BLOCKED ${data.ip}
-            </div>
-            <p><strong>Reason:</strong> ${data.blockInfo.reason}</p>
-            <p><strong>Range:</strong> ${data.blockInfo.range}</p>
-            
-            <div class="grid">
-              <div class="card">
-                <h3>Basic Information</h3>
-                ${createInfoRows({
-                  'ASN': data.basic?.asn || 'N/A',
-                  'Organización': data.basic?.organization || 'N/A',
-                  'País': data.basic?.country || 'N/A',
-                  'Ciudad': data.basic?.city || 'N/A'
-                })}
-              </div>
-
-              ${data.asnMetrics && data.asnMetrics.available ? `
-              <div class="card">
-                <h3>ASN Metrics ${data.basic?.asn}</h3>
-                ${data.asnMetrics.botVsHuman ? `
-                  <div class="metric-row">
-                    <span class="label">Bot Traffic:</span>
-                    <span class="value">${data.asnMetrics.botVsHuman.bot}%</span>
-                  </div>
-                  <div class="metric-row">
-                    <span class="label">Human Traffic:</span>
-                    <span class="value">${data.asnMetrics.botVsHuman.human}%</span>
-                  </div>
-                ` : ''}
-                <small>Source: ${data.asnMetrics.source}</small>
-              </div>
-              ` : ''}
-
-              <div class="card">
-                <h3>AbuseIPDB Report</h3>
-                ${data.reputation?.abuseipdb ? createInfoRows({
-                  'Score': `${data.reputation.abuseipdb.score}%`,
-                  'Reports': data.reputation.abuseipdb.reports,
-                  'Whitelisted': data.reputation.abuseipdb.isWhitelisted ? 'Yes' : 'No'
-                }) : '<p>Not available</p>'}
-              </div>
-
-              <div class="card">
-                <h3>Shodan Intelligence</h3>
-                ${data.intelligence?.shodan ? createInfoRows({
-                  'Ports': data.intelligence.shodan?.ports?.join(', ') || 'N/A',
-                  'Services': data.intelligence.shodan?.services?.map(s => `${s.port}:${s.product}`).join(', ') || 'N/A'
-                }) : createInfoRows({
-                  'Puertos': 'N/A',
-                  'Servicios': 'N/A'
-                })}
-              </div>
-            </div>
-          </div>
-        `;
+        html += renderBlockedIP(data);
       } else {
-        const riskClass = `risk-${data.reputation.riskLevel}`;
-        
-        html += `
-          <div class="ip-result">
-            <div class="risk-indicator ${riskClass}">
-              ${getRiskEmoji(data.reputation.riskLevel)} ${data.ip} - Risk Level: ${data.reputation.riskLevel.toUpperCase()} (${data.reputation.riskScore}/100)
-            </div>`;
-
-        // Mostrar si fue auto-bloqueada
-        if (data.autoBlocked) {
-          html += `
-            <div class="auto-blocked">
-              ${data.autoBlocked.type === 'single' ? 'IP blocked' : 'Subnet blocked'}: ${data.autoBlocked.blocked}
-            </div>`;
-        }
-
-        html += `
-            <div class="grid">
-              <div class="card">
-                <h3>Basic Information</h3>
-                ${createInfoRows({
-                  'ASN': data.basic?.asn || 'N/A',
-                  'Organización': data.basic?.organization || 'N/A',
-                  'País': data.basic?.country || 'N/A',
-                  'Ciudad': data.basic?.city || 'N/A'
-                })}
-              </div>
-
-              ${data.asnMetrics && data.asnMetrics.available ? `
-              <div class="card">
-                <h3>ASN Metrics ${data.basic?.asn}</h3>
-                ${data.asnMetrics.botVsHuman ? `
-                  <div class="metric-row">
-                    <span class="label">Bot Traffic:</span>
-                    <span class="value">${data.asnMetrics.botVsHuman.bot}%</span>
-                  </div>
-                  <div class="metric-row">
-                    <span class="label">Human Traffic:</span>
-                    <span class="value">${data.asnMetrics.botVsHuman.human}%</span>
-                  </div>
-                ` : ''}
-                ${data.asnMetrics.prefixes ? `
-                  <div class="metric-row">
-                    <span class="label">IPv4 Prefixes:</span>
-                    <span class="value">${data.asnMetrics.prefixes.ipv4}</span>
-                  </div>
-                  <div class="metric-row">
-                    <span class="label">IPv6 Prefixes:</span>
-                    <span class="value">${data.asnMetrics.prefixes.ipv6}</span>
-                  </div>
-                ` : ''}
-                <small>Source: ${data.asnMetrics.source}</small>
-                ${data.asnMetrics.note ? `<br><small>${data.asnMetrics.note}</small>` : ''}
-              </div>
-              ` : (data.asnMetrics ? `
-              <div class="card">
-                <h3>ASN Metrics ${data.basic?.asn}</h3>
-                <p>Métricas no disponibles</p>
-                ${data.asnMetrics.error ? `<small>Error: ${data.asnMetrics.error}</small>` : ''}
-              </div>
-              ` : '')}
-
-              <div class="card">
-                <h3>AbuseIPDB Report</h3>
-                ${data.reputation.abuseipdb ? createInfoRows({
-                  'Score': `${data.reputation.abuseipdb.score}%`,
-                  'Reportes': data.reputation.abuseipdb.reports,
-                  'Whitelisted': data.reputation.abuseipdb.isWhitelisted ? '✅' : '❌'
-                }) : '<p>Not available</p>'}
-              </div>
-
-              <div class="card">
-                <h3>VirusTotal Analysis</h3>
-                ${data.reputation.virustotal ? `
-                  <div class="info-row">
-                    <span class="label">Maliciosos:</span>
-                    <span class="badge badge-danger">${data.reputation.virustotal.malicious}</span>
-                  </div>
-                  <div class="info-row">
-                    <span class="label">Inofensivos:</span>
-                    <span class="badge badge-success">${data.reputation.virustotal.harmless}</span>
-                  </div>
-                ` : '<p>Not available</p>'}
-              </div>
-
-              <div class="card">
-                <h3>Threat Intelligence</h3>
-                ${data.intelligence.greynoise ? createInfoRows({
-                  'GreyNoise': data.intelligence.greynoise.classification || 'N/A',
-                  'Shodan Puertos': data.intelligence.shodan?.ports?.join(', ') || 'N/A'
-                }) : createInfoRows({
-                  'Shodan Puertos': data.intelligence.shodan?.ports?.join(', ') || 'N/A'
-                })}
-              </div>
-            </div>
-
-            <div class="blocking-buttons">
-              <button onclick="blockIP('${data.ip}')">Block IP (/32)</button>
-              <button onclick="blockRange100('${data.ip}')">Block ~100 IPs (/25)</button>
-              <button onclick="blockSubnet('${data.ip}')">Block 256 IPs (/24)</button>
-              ${data.basic?.asn ? `<button onclick="blockASN('${data.basic.asn}')">Block ${data.basic.asn}</button>` : ''}
-            </div>
-          </div>
-        `;
+        html += renderAnalyzedIP(data);
       }
     } else {
-      html += `
-        <div class="ip-result">
-          <div class="risk-indicator risk-high">
-            ❌ ${ip} - Error: ${result.reason.message}
-          </div>
-        </div>
-      `;
+      html += renderErrorIP(ip, result.reason.message);
     }
-    html += `<hr style="margin: 30px 0; border: 1px solid #eee;">`;
   });
 
   resultsDiv.innerHTML = html;
   resultsDiv.style.display = 'block';
-  
-  // Guardar resultados para poder volver después
   window.lastAnalysisResults = html;
 }
 
-function displayResults(data) {
-  const results = document.getElementById('results');
+function renderAnalyzedIP(data) {
+  const level = data.reputation.riskLevel;
+  const score = data.reputation.riskScore;
   
-  // Determinar el nivel de riesgo y título apropiado
-  let riskLevel = data.reputation.riskLevel;
-  let riskScore = data.reputation.riskScore;
-  let titlePrefix = '';
-  
-  if (data.error && data.error.includes('Partial analysis')) {
-    // Si es análisis parcial, mostrar como LOW risk por defecto
-    riskLevel = 'low';
-    riskScore = 10;
-    titlePrefix = 'ANALYZED';
-  } else if (data.error) {
-    // Si hay error completo, mantener unknown
-    titlePrefix = 'UNKNOWN';
-  } else {
-    // Análisis completo
-    titlePrefix = riskLevel.toUpperCase();
-  }
-  
-  const riskClass = `risk-${riskLevel}`;
-  
-  results.innerHTML = `
-    <div class="risk-indicator ${riskClass}">
-      ${titlePrefix} ${data.ip} - Risk Level: ${riskLevel.toUpperCase()} (${riskScore}/100)
-    </div>
+  return `
+    <div class="ip-card">
+      <div class="ip-card-header risk-${level}">
+        <div class="ip-info">
+          <span class="ip-address">${data.ip}</span>
+          <span class="risk-badge ${level}">${level}</span>
+        </div>
+        <span class="risk-score">Score: ${score}/100</span>
+      </div>
+      
+      <div class="ip-card-body">
+        ${data.autoBlocked ? `
+          <div class="reserved-notice">
+            <h4>Auto-blocked</h4>
+            <p>${data.autoBlocked.type === 'single' ? 'IP blocked' : 'Subnet blocked'}: ${data.autoBlocked.blocked}</p>
+          </div>
+        ` : ''}
+        
+        <div class="data-grid">
+          <div class="data-card">
+            <div class="data-card-title">Network Information</div>
+            ${renderDataRows({
+              'ASN': data.basic?.asn || 'N/A',
+              'Organization': data.basic?.organization || 'N/A',
+              'Country': data.basic?.country || 'N/A',
+              'City': data.basic?.city || 'N/A'
+            })}
+          </div>
 
-    <div class="grid">
-      <div class="card">
-        <h3>Basic Information</h3>
-        ${createInfoRows({
-          'ASN': data.basic?.asn || 'N/A',
-          'Organización': data.basic?.organization || 'N/A',
-          'País': data.basic?.country || 'N/A',
-          'Ciudad': data.basic?.city || 'N/A'
-        })}
+          ${data.asnMetrics?.available ? `
+          <div class="data-card">
+            <div class="data-card-title">ASN Metrics</div>
+            ${data.asnMetrics.botVsHuman ? `
+              ${renderDataRows({
+                'Bot Traffic': data.asnMetrics.botVsHuman.bot + '%',
+                'Human Traffic': data.asnMetrics.botVsHuman.human + '%'
+              })}
+            ` : ''}
+            <div class="data-row">
+              <span class="data-label">Source</span>
+              <span class="data-value">${data.asnMetrics.source}</span>
+            </div>
+          </div>
+          ` : ''}
+
+          <div class="data-card">
+            <div class="data-card-title">AbuseIPDB</div>
+            ${data.reputation.abuseipdb ? renderDataRows({
+              'Confidence Score': data.reputation.abuseipdb.score + '%',
+              'Total Reports': data.reputation.abuseipdb.reports,
+              'Whitelisted': data.reputation.abuseipdb.isWhitelisted ? 'Yes' : 'No'
+            }) : '<p class="data-label">Data not available</p>'}
+          </div>
+
+          <div class="data-card">
+            <div class="data-card-title">VirusTotal</div>
+            ${data.reputation.virustotal ? renderDataRows({
+              'Malicious': data.reputation.virustotal.malicious,
+              'Harmless': data.reputation.virustotal.harmless
+            }) : '<p class="data-label">Data not available</p>'}
+          </div>
+
+          <div class="data-card">
+            <div class="data-card-title">Shodan Intelligence</div>
+            ${renderDataRows({
+              'Open Ports': data.intelligence?.shodan?.ports?.join(', ') || 'N/A'
+            })}
+          </div>
+        </div>
       </div>
 
-      <div class="card">
-        <h3>AbuseIPDB Report</h3>
-        ${data.reputation.abuseipdb ? createInfoRows({
-          'Score': `${data.reputation.abuseipdb.score}%`,
-          'Reportes': data.reputation.abuseipdb.reports,
-          'Tipo': data.reputation.abuseipdb.categories || 'N/A',
-          'Whitelisted': data.reputation.abuseipdb.isWhitelisted ? '✅' : '❌'
-        }) : '<p>Not available</p>'}
-      </div>
-
-      <div class="card">
-        <h3>VirusTotal Analysis</h3>
-        ${data.reputation.virustotal ? `
-          <div class="info-row">
-            <span class="label">Maliciosos:</span>
-            <span class="badge badge-danger">${data.reputation.virustotal.malicious}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">Sospechosos:</span>
-            <span class="badge badge-warning">${data.reputation.virustotal.suspicious}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">Inofensivos:</span>
-            <span class="badge badge-success">${data.reputation.virustotal.harmless}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">Reputación:</span>
-            <span class="value">${data.reputation.virustotal.reputation}</span>
-          </div>
-        ` : '<p>Not available</p>'}
-      </div>
-
-      <div class="card">
-        <h3>🔍 GreyNoise</h3>
-        ${data.intelligence.greynoise ? createInfoRows({
-          'Clasificación': data.intelligence.greynoise.classification || 'N/A',
-          'Noise': data.intelligence.greynoise.noise ? '✅' : '❌',
-          'RIOT': data.intelligence.greynoise.riot ? '✅' : '❌',
-          'Nombre': data.intelligence.greynoise.name || 'N/A'
-        }) : '<p>Not available</p>'}
-      </div>
-
-      <div class="card">
-        <h3>🌐 Shodan</h3>
-        ${data.intelligence.shodan ? `
-          <div class="info-row">
-            <span class="label">Puertos abiertos:</span>
-            <span class="value">${data.intelligence.shodan.ports?.join(', ') || 'N/A'}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">Servicios:</span>
-            <span class="value">${data.intelligence.shodan.services?.length || 0}</span>
-          </div>
-          <div class="info-row">
-            <span class="label">Hostnames:</span>
-            <span class="value">${data.intelligence.shodan.hostnames?.join(', ') || 'N/A'}</span>
-          </div>
-        ` : '<p>Not available</p>'}
-      </div>
-
-      <div class="card">
-        <h3>☁️ Cloudflare Radar - Bot vs Human</h3>
-        ${data.intelligence.cloudflare ? `
-          <div class="info-row">
-            <span class="label">Bot (automated):</span>
-            <span class="badge badge-danger">${data.intelligence.cloudflare.bot}%</span>
-          </div>
-          <div class="info-row">
-            <span class="label">Human:</span>
-            <span class="badge badge-success">${data.intelligence.cloudflare.human}%</span>
-          </div>
-          <div style="margin-top: 10px; padding: 8px; background: #f5f5f5; border-radius: 4px; font-size: 0.85em;">
-            📊 Estadísticas de tráfico HTTP del ASN ${data.basic?.asn} en los últimos 7 días
-          </div>
-        ` : '<p>Not available</p>'}
-      </div>
-
-      <div class="card">
-        <h3>🔗 AlienVault OTX</h3>
-        ${data.reputation.otx ? createInfoRows({
-          'Pulses': data.reputation.otx.pulseCount,
-          'Reputación': data.reputation.otx.reputation
-        }) : '<p>Not available</p>'}
+      <div class="ip-card-actions">
+        <button class="btn-action danger" onclick="blockIP('${data.ip}')">Block IP (/32)</button>
+        <button class="btn-action danger" onclick="blockRange100('${data.ip}')">Block /25</button>
+        <button class="btn-action danger" onclick="blockSubnet('${data.ip}')">Block /24</button>
+        ${data.basic?.asn ? `<button class="btn-action" onclick="blockASN('${data.basic.asn}')">Block ${data.basic.asn}</button>` : ''}
       </div>
     </div>
   `;
-
-  results.style.display = 'block';
 }
 
-function createInfoRows(data) {
+function renderBlockedIP(data) {
+  return `
+    <div class="ip-card">
+      <div class="ip-card-header risk-blocked">
+        <div class="ip-info">
+          <span class="ip-address">${data.ip}</span>
+          <span class="risk-badge blocked">Blocked</span>
+        </div>
+      </div>
+      
+      <div class="ip-card-body">
+        <div class="reserved-notice">
+          <h4>Block Information</h4>
+          <p><strong>Reason:</strong> ${data.blockInfo.reason}</p>
+          <p><strong>Range:</strong> ${data.blockInfo.range}</p>
+        </div>
+        
+        <div class="data-grid">
+          <div class="data-card">
+            <div class="data-card-title">Network Information</div>
+            ${renderDataRows({
+              'ASN': data.basic?.asn || 'N/A',
+              'Organization': data.basic?.organization || 'N/A',
+              'Country': data.basic?.country || 'N/A',
+              'City': data.basic?.city || 'N/A'
+            })}
+          </div>
+
+          <div class="data-card">
+            <div class="data-card-title">AbuseIPDB</div>
+            ${data.reputation?.abuseipdb ? renderDataRows({
+              'Confidence Score': data.reputation.abuseipdb.score + '%',
+              'Total Reports': data.reputation.abuseipdb.reports
+            }) : '<p class="data-label">Data not available</p>'}
+          </div>
+
+          <div class="data-card">
+            <div class="data-card-title">Shodan Intelligence</div>
+            ${renderDataRows({
+              'Open Ports': data.intelligence?.shodan?.ports?.join(', ') || 'N/A'
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderReservedIP(data) {
+  return `
+    <div class="ip-card">
+      <div class="ip-card-header risk-reserved">
+        <div class="ip-info">
+          <span class="ip-address">${data.ip}</span>
+          <span class="risk-badge reserved">${data.reservedType.replace('_', ' ')}</span>
+        </div>
+      </div>
+      
+      <div class="ip-card-body">
+        <div class="reserved-notice">
+          <h4>Reserved IP Address</h4>
+          <p>${data.message}</p>
+          <p><em>${data.note}</em></p>
+        </div>
+        
+        <div class="data-grid">
+          <div class="data-card">
+            <div class="data-card-title">Classification</div>
+            ${renderDataRows({
+              'Type': data.reservedType.replace('_', ' ').toUpperCase(),
+              'Status': 'Reserved/Private IP'
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderErrorIP(ip, error) {
+  return `
+    <div class="ip-card">
+      <div class="ip-card-header risk-high">
+        <div class="ip-info">
+          <span class="ip-address">${ip}</span>
+          <span class="risk-badge high">Error</span>
+        </div>
+      </div>
+      <div class="ip-card-body">
+        <div class="reserved-notice">
+          <h4>Analysis Failed</h4>
+          <p>${error}</p>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderDataRows(data) {
   return Object.entries(data).map(([key, value]) => `
-    <div class="info-row">
-      <span class="label">${key}:</span>
-      <span class="value">${value}</span>
+    <div class="data-row">
+      <span class="data-label">${key}</span>
+      <span class="data-value">${value}</span>
     </div>
   `).join('');
 }
 
-function getRiskEmoji(level) {
-  return { 
-    low: 'LOW RISK', 
-    medium: 'MEDIUM RISK', 
-    high: 'HIGH RISK',
-    reserved: 'RESERVED',
-    unknown: 'UNKNOWN'
-  }[level];
-}
+function showToast(message, type = 'info') {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
 
-function showError(message) {
-  showAlert(message, 'error');
-}
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = message;
+  document.body.appendChild(toast);
 
-function showAlert(message, type = 'info') {
-  // Remover alertas existentes
-  const existingAlerts = document.querySelectorAll('.input-alert');
-  existingAlerts.forEach(alert => alert.remove());
-
-  const inputGroup = document.querySelector('.input-group');
-  const alert = document.createElement('div');
-  alert.className = `input-alert alert-${type}`;
-  alert.textContent = message;
-  
-  inputGroup.appendChild(alert);
-  
-  // Auto-remover después de 4 segundos
-  setTimeout(() => {
-    if (alert.parentNode) {
-      alert.remove();
-    }
-  }, 4000);
-  
-  // Remover al hacer click en el input
-  const input = document.getElementById('ipInput');
-  const removeAlert = () => {
-    if (alert.parentNode) {
-      alert.remove();
-    }
-    input.removeEventListener('click', removeAlert);
-    input.removeEventListener('focus', removeAlert);
-  };
-  
-  input.addEventListener('click', removeAlert);
-  input.addEventListener('focus', removeAlert);
+  setTimeout(() => toast.remove(), 4000);
 }
 
 document.getElementById('ipInput').addEventListener('keypress', (e) => {
   if (e.key === 'Enter' && e.ctrlKey) analyzeIPs();
 });
 
-// Funciones de bloqueo
 async function blockIP(ip) {
-  const reason = prompt('Razón del bloqueo:', 'IP maliciosa detectada manualmente');
+  const reason = prompt('Block reason:', 'Malicious IP detected');
   if (!reason) return;
   
   try {
@@ -471,20 +290,15 @@ async function blockIP(ip) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ip, reason })
     });
-    
     const result = await response.json();
-    if (result.success) {
-      alert(`✅ ${result.message}\n\n💡 Nota: En producción, esta IP se agregaría a la base de datos de IPs bloqueadas y aparecería en "View Blocked List".`);
-    } else {
-      alert(`❌ Error: ${result.error}`);
-    }
+    showToast(result.success ? `IP ${ip} blocked successfully` : `Error: ${result.error}`, result.success ? 'success' : 'error');
   } catch (error) {
-    alert(`❌ Error: ${error.message}`);
+    showToast(`Error: ${error.message}`, 'error');
   }
 }
 
 async function blockSubnet(ip) {
-  const reason = prompt('Razón del bloqueo de 256 IPs (/24):', 'Subnet maliciosa detectada');
+  const reason = prompt('Block reason for /24 subnet:', 'Malicious subnet detected');
   if (!reason) return;
   
   try {
@@ -493,16 +307,15 @@ async function blockSubnet(ip) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ip, cidr: 24, reason })
     });
-    
     const result = await response.json();
-    alert(`✅ Subnet bloqueada: ${result.blocked} (256 IPs)`);
+    showToast(`Subnet blocked: ${result.blocked}`, 'success');
   } catch (error) {
-    alert(`❌ Error: ${error.message}`);
+    showToast(`Error: ${error.message}`, 'error');
   }
 }
 
 async function blockRange100(ip) {
-  const reason = prompt('Razón del bloqueo de ~100 IPs (/25):', 'Rango malicioso detectado');
+  const reason = prompt('Block reason for /25 range:', 'Malicious range detected');
   if (!reason) return;
   
   try {
@@ -511,16 +324,15 @@ async function blockRange100(ip) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ip, reason })
     });
-    
     const result = await response.json();
-    alert(`✅ Rango bloqueado: ${result.blocked} (~128 IPs)`);
+    showToast(`Range blocked: ${result.blocked}`, 'success');
   } catch (error) {
-    alert(`❌ Error: ${error.message}`);
+    showToast(`Error: ${error.message}`, 'error');
   }
 }
 
 async function blockASN(asn) {
-  const reason = prompt('Razón del bloqueo de ASN:', `ASN ${asn} malicioso detectado`);
+  const reason = prompt('Block reason for ASN:', `ASN ${asn} malicious activity`);
   if (!reason) return;
   
   try {
@@ -529,11 +341,10 @@ async function blockASN(asn) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ asn, reason })
     });
-    
     const result = await response.json();
-    alert(`✅ ASN ${asn} bloqueado: ${result.count} rangos CIDR bloqueados`);
+    showToast(`ASN ${asn} blocked: ${result.count} CIDR ranges`, 'success');
   } catch (error) {
-    alert(`❌ Error: ${error.message}`);
+    showToast(`Error: ${error.message}`, 'error');
   }
 }
 
@@ -542,116 +353,92 @@ async function showBlockedList() {
     const response = await fetch('/api/blocked-list');
     const blocked = await response.json();
     
-    let html = '<h2>Lista de IPs Bloqueadas</h2>';
+    const resultsDiv = document.getElementById('results');
+    let html = `
+      <div class="results-header">
+        <h2>Blocked IP Addresses</h2>
+        <button class="btn-export" onclick="showAWSFormat()">AWS WAF Format</button>
+      </div>
+    `;
     
-    // Botón para volver a resultados anteriores
     if (window.lastAnalysisResults) {
-      html += `
-        <div class="blocked-controls">
-          <button onclick="showLastResults()" style="background: #17a2b8; margin-right: 10px;">🔙 Volver a Resultados</button>
-          <button onclick="showAWSFormat()" style="background: #f39c12;">Formato AWS WAF</button>
-        </div>
-      `;
-    } else {
-      html += `
-        <div class="blocked-controls">
-          <button onclick="showAWSFormat()" style="background: #f39c12; margin-bottom: 20px;">Formato AWS WAF</button>
-        </div>
-      `;
+      html += `<button class="btn-secondary" onclick="restoreResults()" style="margin-bottom: 20px;">Back to Results</button>`;
     }
     
     if (blocked.length === 0) {
-      html += '<p>No hay IPs bloqueadas</p>';
+      html += '<p class="data-label" style="padding: 40px; text-align: center;">No blocked IPs found</p>';
     } else {
-      html += '<div class="blocked-list">';
-      
+      html += '<div class="blocked-list-container">';
       blocked.forEach(item => {
         html += `
           <div class="blocked-item">
-            <strong>${item.ip}</strong><br>
-            <small>Razón: ${item.reason}</small><br>
-            <small>Fecha: ${new Date(item.timestamp).toLocaleString()}</small>
-            ${item.reports ? `<br><small>Reportes: ${item.reports}</small>` : ''}
-            <br><small>📍 Reportado en: AbuseIPDB, VirusTotal</small>
+            <div>
+              <div class="blocked-ip">${item.ip}</div>
+              <div class="blocked-meta">Reason: ${item.reason} | ${new Date(item.timestamp).toLocaleString()}</div>
+            </div>
           </div>
         `;
       });
       html += '</div>';
     }
     
-    document.getElementById('results').innerHTML = html;
-    document.getElementById('results').style.display = 'block';
+    resultsDiv.innerHTML = html;
+    resultsDiv.style.display = 'block';
   } catch (error) {
-    alert(`❌ Error: ${error.message}`);
+    showToast(`Error: ${error.message}`, 'error');
   }
 }
 
-// Función para volver a los últimos resultados
-function showLastResults() {
+function restoreResults() {
   if (window.lastAnalysisResults) {
     document.getElementById('results').innerHTML = window.lastAnalysisResults;
-    document.getElementById('results').style.display = 'block';
   }
 }
 
 async function showAWSFormat() {
-  const html = `
-    <h2>Formato AWS WAF</h2>
-    <p>Lista de IPs bloqueadas para AWS WAF:</p>
-    
-    <div class="aws-format">
-      <textarea readonly rows="15" style="width: 100%; font-family: monospace; padding: 15px; border: 1px solid #ddd; border-radius: 4px;">
-# Lista de IPs bloqueadas
-# Generada automáticamente
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.innerHTML = `
+    <div class="results-header">
+      <h2>AWS WAF Export</h2>
+    </div>
+    <div class="export-container">
+      <textarea readonly id="awsExport"># AWS WAF IP Set Format
+# Generated: ${new Date().toISOString()}
+# Add IPs below in CIDR notation
+
 192.168.1.100/32
 10.0.0.50/32
-172.16.0.25/32
-# Agregar más IPs según sea necesario
-      </textarea>
-      <div style="margin-top: 15px; text-align: center;">
-        <button onclick="copyAWSListSimple()" style="background: #28a745; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">Copiar Lista</button>
-        <button onclick="showBlockedList()" style="background: #6c757d; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px;">Volver a Lista</button>
+172.16.0.25/32</textarea>
+      <div class="export-actions">
+        <button class="btn-primary" onclick="copyAWSList()">Copy to Clipboard</button>
+        <button class="btn-secondary" onclick="showBlockedList()">Back</button>
       </div>
     </div>
   `;
-  
-  document.getElementById('results').innerHTML = html;
 }
 
-function copyAWSListSimple() {
-  const textarea = document.querySelector('.aws-format textarea');
+function copyAWSList() {
+  const textarea = document.getElementById('awsExport');
   textarea.select();
   document.execCommand('copy');
-  showAlert('Lista copiada al portapapeles', 'success');
-}
-
-function copyToClipboard(text) {
-  navigator.clipboard.writeText(text).then(() => {
-    alert('✅ Copiado al portapapeles');
-  }).catch(() => {
-    alert('❌ Error al copiar');
-  });
+  showToast('Copied to clipboard', 'success');
 }
 
 async function generateBlocklist() {
   const input = document.getElementById('ipInput').value.trim();
   if (!input) {
-    showError('⚠️ Por favor ingrese al menos una dirección IP para continuar');
+    showToast('Please enter at least one IP address', 'error');
     return;
   }
 
-  const ips = input.split(/[\n,]/)
-    .map(ip => ip.trim())
-    .filter(ip => ip && ip.length > 0);
+  const ips = input.split(/[\n,]/).map(ip => ip.trim()).filter(ip => ip);
 
   if (ips.length === 0) {
-    alert('❌ No se encontraron IPs válidas');
+    showToast('No valid IP addresses found', 'error');
     return;
   }
 
   try {
-    // Primero analizar las IPs para obtener su nivel de riesgo
-    console.log('🔍 Analizando IPs:', ips);
     const analyzed = await Promise.all(ips.map(async (ip) => {
       try {
         const response = await fetch('/api/analyze-ip', {
@@ -660,21 +447,12 @@ async function generateBlocklist() {
           body: JSON.stringify({ ip })
         });
         const data = await response.json();
-        const result = {
-          ip: ip,
-          riskLevel: data.reputation?.riskLevel || 'low'
-        };
-        console.log(`📊 ${ip} → ${result.riskLevel.toUpperCase()}`);
-        return result;
-      } catch (error) {
-        console.error(`❌ Error analizando ${ip}:`, error);
-        return { ip: ip, riskLevel: 'low' };
+        return { ip, riskLevel: data.reputation?.riskLevel || 'low' };
+      } catch {
+        return { ip, riskLevel: 'low' };
       }
     }));
     
-    console.log('📋 Datos analizados:', analyzed);
-    
-    // Generar blocklist con los datos analizados
     const response = await fetch('/api/generate-blocklist', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -682,138 +460,77 @@ async function generateBlocklist() {
     });
 
     const result = await response.json();
-    console.log('✅ Resultado AWS WAF:', result);
     
-    let html = `
-      <h2>📋 Lista de Bloqueo AWS WAF</h2>
-      <p><strong>Total de rangos:</strong> ${result.total}</p>
-      <p><strong>Regla:</strong> LOW risk = /32 (solo IP), MEDIUM/HIGH = /24 (subnet)</p>
-      <div class="aws-format">
-        <textarea readonly style="width: 100%; height: 300px; font-family: monospace;">${result.formatted}</textarea>
-        <button onclick="copyToClipboard('${result.formatted.replace(/'/g, "\\'")}')">📋 Copiar Lista</button>
+    const resultsDiv = document.getElementById('results');
+    resultsDiv.innerHTML = `
+      <div class="results-header">
+        <h2>AWS WAF Blocklist</h2>
       </div>
-      <button onclick="location.reload()" style="margin-top: 15px;">← Volver</button>
+      <div class="reserved-notice">
+        <h4>Blocklist Generated</h4>
+        <p><strong>Total ranges:</strong> ${result.total}</p>
+        <p><strong>Rule:</strong> LOW risk = /32 (single IP), MEDIUM/HIGH = /24 (subnet)</p>
+      </div>
+      <div class="export-container">
+        <textarea readonly id="awsExport">${result.formatted}</textarea>
+        <div class="export-actions">
+          <button class="btn-primary" onclick="copyAWSList()">Copy to Clipboard</button>
+          <button class="btn-secondary" onclick="location.reload()">New Analysis</button>
+        </div>
+      </div>
     `;
-    
-    document.getElementById('results').innerHTML = html;
-    document.getElementById('results').style.display = 'block';
+    resultsDiv.style.display = 'block';
   } catch (error) {
-    console.error('❌ Error completo:', error);
-    alert(`❌ Error: ${error.message}`);
+    showToast(`Error: ${error.message}`, 'error');
   }
 }
 
 function generatePDF() {
   const resultsContent = document.getElementById('results').innerHTML;
-  
-  // Crear ventana nueva para el PDF
   const printWindow = window.open('', '_blank');
+  
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>IP Threat Intelligence Report - ${new Date().toLocaleDateString()}</title>
+      <title>IP Threat Intelligence Report</title>
       <style>
-        body { 
-          font-family: 'Times New Roman', serif; 
-          margin: 40px; 
-          color: #000;
-          background: #fff;
-          line-height: 1.4;
-        }
-        .header {
-          text-align: center;
-          border-bottom: 2px solid #000;
-          padding-bottom: 20px;
-          margin-bottom: 30px;
-        }
-        .header h1 {
-          font-size: 24px;
-          margin: 0;
-          font-weight: bold;
-        }
-        .header p {
-          margin: 5px 0;
-          font-size: 14px;
-        }
-        .grid { 
-          display: table;
-          width: 100%;
-          margin: 20px 0;
-        }
-        .card { 
-          display: table-cell;
-          vertical-align: top;
-          padding: 15px;
-          border: 1px solid #000;
-          margin: 5px;
-          width: 25%;
-        }
-        .card h3 { 
-          margin: 0 0 10px 0; 
-          font-size: 14px;
-          font-weight: bold;
-          border-bottom: 1px solid #000;
-          padding-bottom: 5px;
-        }
-        .info-row, .metric-row { 
-          display: flex; 
-          justify-content: space-between; 
-          padding: 3px 0; 
-          border-bottom: 1px solid #ccc;
-          font-size: 12px;
-        }
-        .info-row:last-child, .metric-row:last-child {
-          border-bottom: none;
-        }
-        .label { font-weight: bold; }
-        .value { text-align: right; }
-        .risk-indicator { 
-          padding: 15px; 
-          margin: 15px 0; 
-          border: 2px solid #000;
-          text-align: center; 
-          font-weight: bold;
-          font-size: 16px;
-        }
-        .risk-low { background: #f0f0f0; }
-        .risk-medium { background: #e0e0e0; }
-        .risk-high { background: #d0d0d0; }
-        .risk-reserved { background: #f5f5f5; }
-        .blocked { background: #e8e8e8; border: 2px solid #000; }
-        .ip-result { 
-          margin: 25px 0; 
-          padding: 20px; 
-          border: 1px solid #000;
-          page-break-inside: avoid;
-        }
-        .blocking-buttons, button, .auto-blocked { display: none !important; }
-        .reserved-info {
-          background: #f5f5f5;
-          padding: 15px;
-          border: 1px solid #000;
-          margin: 10px 0;
-        }
-        .reserved-info h3 {
-          margin: 0 0 10px 0;
-          font-size: 14px;
-        }
-        .reserved-info p {
-          margin: 5px 0;
-          font-size: 12px;
-        }
-        @media print { 
-          .no-print, button { display: none !important; }
-          body { margin: 20px; }
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; line-height: 1.5; }
+        .report-header { text-align: center; border-bottom: 2px solid #1e293b; padding-bottom: 24px; margin-bottom: 32px; }
+        .report-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+        .report-header p { font-size: 12px; color: #64748b; }
+        .ip-card { border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 24px; page-break-inside: avoid; }
+        .ip-card-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; }
+        .ip-card-header.risk-low { background: #f0fdf4; }
+        .ip-card-header.risk-medium { background: #fffbeb; }
+        .ip-card-header.risk-high, .ip-card-header.risk-blocked { background: #fef2f2; }
+        .ip-card-header.risk-reserved { background: #f8fafc; }
+        .ip-address { font-family: monospace; font-weight: 600; }
+        .risk-badge { padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+        .risk-badge.low { background: #dcfce7; color: #166534; }
+        .risk-badge.medium { background: #fef3c7; color: #92400e; }
+        .risk-badge.high, .risk-badge.blocked { background: #fee2e2; color: #991b1b; }
+        .risk-badge.reserved { background: #e2e8f0; color: #475569; }
+        .ip-card-body { padding: 20px; }
+        .data-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .data-card { background: #f8fafc; padding: 16px; border-radius: 6px; }
+        .data-card-title { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; }
+        .data-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 12px; border-bottom: 1px solid #e2e8f0; }
+        .data-row:last-child { border-bottom: none; }
+        .data-label { color: #64748b; }
+        .data-value { font-weight: 500; }
+        .reserved-notice { background: #f1f5f9; padding: 16px; border-radius: 6px; margin-bottom: 16px; }
+        .reserved-notice h4 { font-size: 13px; margin-bottom: 6px; }
+        .reserved-notice p { font-size: 12px; color: #64748b; }
+        .ip-card-actions, .btn-action, .btn-primary, .btn-secondary, .btn-export, .results-header button { display: none !important; }
+        @media print { body { padding: 20px; } }
       </style>
     </head>
     <body>
-      <div class="header">
+      <div class="report-header">
         <h1>IP THREAT INTELLIGENCE REPORT</h1>
-        <p><strong>Generated:</strong> ${new Date().toLocaleDateString()}</p>
-        <p><strong>System:</strong> IP Threat Intelligence Platform</p>
-        <p><strong>Classification:</strong> CONFIDENTIAL</p>
+        <p>Generated: ${new Date().toLocaleString()} | Classification: CONFIDENTIAL</p>
       </div>
       ${resultsContent}
     </body>
@@ -821,9 +538,5 @@ function generatePDF() {
   `);
   
   printWindow.document.close();
-  
-  // Esperar a que cargue y luego imprimir
-  setTimeout(() => {
-    printWindow.print();
-  }, 500);
+  setTimeout(() => printWindow.print(), 500);
 }

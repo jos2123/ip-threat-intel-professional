@@ -3,40 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Inteligencia de Amenazas IP</title>
+    <title>IP Threat Intelligence Platform</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1 style="color: #2c3e50; font-size: 2.5em;">SISTEMA DE INTELIGENCIA DE AMENAZAS IP</h1>
-            <p style="color: #6c757d; font-size: 1.2em;">Plataforma Profesional de Análisis y Detección de Amenazas</p>
-            <p><small>Ingrese múltiples direcciones IP (una por línea) o use Ctrl+Enter para analizar</small></p>
-        </header>
-
-        <div class="search-box">
-            <div class="input-group">
-                <textarea id="ipInput" placeholder="Ingrese direcciones IP separadas por líneas o comas:
-8.8.8.8, 1.1.1.1
-o
-8.8.8.8
-1.1.1.1" rows="4"></textarea>
-                <button id="analyzeBtn" onclick="analyzeIPs()" style="background: #28a745; font-weight: bold;">ANALIZAR IPs</button>
-            </div>
-            <div style="margin-top: 15px; text-align: center;">
-                <button onclick="showBlockedList()" style="background: #dc3545; padding: 10px 20px;">Ver Lista Bloqueada</button>
-                <button onclick="generateBlocklist()" style="background: #6c757d; padding: 10px 20px; margin-left: 10px;">Generar Lista AWS</button>
-            </div>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon"></div>
+            <span>ThreatIntel</span>
         </div>
+        <div class="nav-links">
+            <a href="#" class="active">Analysis</a>
+            <a href="#" onclick="showBlockedList(); return false;">Blocked IPs</a>
+            <a href="#" onclick="generateBlocklist(); return false;">Export</a>
+        </div>
+    </nav>
 
-        <div id="loading" class="loading" style="display: none;">
+    <main class="main-content">
+        <section class="hero">
+            <h1>IP Threat Intelligence Platform</h1>
+            <p>Enterprise-grade threat analysis and IP reputation monitoring</p>
+        </section>
+
+        <section class="search-section">
+            <div class="search-container">
+                <label for="ipInput">Enter IP addresses for analysis</label>
+                <div class="input-wrapper">
+                    <textarea id="ipInput" placeholder="Enter one or more IP addresses separated by commas or new lines&#10;Example: 8.8.8.8, 1.1.1.1" rows="3"></textarea>
+                </div>
+                <div class="action-bar">
+                    <button id="analyzeBtn" class="btn-primary" onclick="analyzeIPs()">
+                        <span class="btn-text">Run Analysis</span>
+                    </button>
+                    <div class="secondary-actions">
+                        <button class="btn-secondary" onclick="showBlockedList()">View Blocked</button>
+                        <button class="btn-secondary" onclick="generateBlocklist()">AWS WAF Export</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div id="loading" class="loading-state" style="display: none;">
+            <div class="spinner"></div>
             <p>Analyzing IP addresses...</p>
         </div>
 
-        <div id="error" class="error" style="display: none;"></div>
+        <div id="error" class="error-state" style="display: none;"></div>
 
-        <div id="results" class="results"></div>
-    </div>
+        <section id="results" class="results-section" style="display: none;"></section>
+    </main>
+
+    <footer class="footer">
+        <p>IP Threat Intelligence Platform &copy; 2026</p>
+    </footer>
 
     <script src="app.js"></script>
 </body>
