@@ -14,23 +14,28 @@ export async function onRequestPost(context) {
       type: 'individual'
     };
     
-    // Guardar en KV (si está disponible)
-    if (env.BLOCKED_IPS) {
-      const key = `blocked_${ip.replace(/\./g, '_')}`;
-      await env.BLOCKED_IPS.put(key, JSON.stringify(blockedIP));
-    }
+    // Verificar si KV está disponible
+    const kvAvailable = !!env.BLOCKED_IPS;
+    let savedToKV = false;
     
-    const blockResult = {
+    if (kvAvailable) {
+      try {
+        const key = `blocked_${ip.replace(/\./g, '_')}`;
+        await env.BLOCKED_IPS.put(key, JSON.stringify(blockedIP));
+        savedToKV = true;
+      } catch (kvError) {
+        console.error('KV write error:', kvError);
+      }
+    }
+
+    return new Response(JSON.stringify({
       success: true,
       blocked: `${ip}/32`,
-      type: 'individual',
-      reason: reason || 'IP bloqueada manualmente',
-      timestamp: new Date().toISOString(),
-      message: `IP ${ip}/32 bloqueada y guardada exitosamente`,
-      savedToKV: !!env.BLOCKED_IPS
-    };
-
-    return new Response(JSON.stringify(blockResult), {
+      reason: reason,
+      timestamp: blockedIP.timestamp,
+      kvAvailable,
+      savedToKV
+    }), {
       headers: { 
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'

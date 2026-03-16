@@ -338,7 +338,12 @@ async function blockIP(ip) {
           body: JSON.stringify({ ip, reason })
         });
         const result = await response.json();
-        showToast(result.success ? `IP ${ip} blocked successfully` : `Error: ${result.error}`, result.success ? 'success' : 'error');
+        console.log('Block result:', result);
+        if (result.success) {
+          showToast(`IP ${ip} blocked` + (result.savedToKV ? ' (saved)' : ' (KV not available)'), result.savedToKV ? 'success' : 'warning');
+        } else {
+          showToast(`Error: ${result.error}`, 'error');
+        }
       } catch (error) {
         showToast(`Error: ${error.message}`, 'error');
       }
