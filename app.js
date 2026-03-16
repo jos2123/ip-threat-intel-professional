@@ -1,3 +1,12 @@
+function goHome() {
+  if (window.lastAnalysisResults) {
+    document.getElementById('results').innerHTML = window.lastAnalysisResults;
+    document.getElementById('results').style.display = 'block';
+  } else {
+    document.getElementById('results').style.display = 'none';
+  }
+}
+
 async function analyzeIPs() {
   const input = document.getElementById('ipInput').value.trim();
   const loading = document.getElementById('loading');
@@ -360,7 +369,7 @@ async function showBlockedList() {
     `;
     
     if (window.lastAnalysisResults) {
-      html += `<button class="btn-secondary" onclick="restoreResults()" style="margin-bottom: 20px;">Back to Results</button>`;
+      html += `<button class="btn-secondary" onclick="goHome()" style="margin-bottom: 20px;">← Back to Analysis</button>`;
     }
     
     if (blocked.length === 0) {
@@ -409,7 +418,7 @@ async function showAWSFormat() {
 172.16.0.25/32</textarea>
       <div class="export-actions">
         <button class="btn-primary" onclick="copyAWSList()">Copy to Clipboard</button>
-        <button class="btn-secondary" onclick="showBlockedList()">Back</button>
+        <button class="btn-secondary" onclick="goHome()">← Back to Analysis</button>
       </div>
     </div>
   `;
@@ -473,7 +482,7 @@ async function generateBlocklist() {
         <textarea readonly id="awsExport">${result.formatted}</textarea>
         <div class="export-actions">
           <button class="btn-primary" onclick="copyAWSList()">Copy to Clipboard</button>
-          <button class="btn-secondary" onclick="location.reload()">New Analysis</button>
+          <button class="btn-secondary" onclick="goHome()">← Back to Analysis</button>
         </div>
       </div>
     `;

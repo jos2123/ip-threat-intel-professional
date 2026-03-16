@@ -46,8 +46,10 @@ body {
 .brand-icon {
   width: 32px;
   height: 32px;
-  background: var(--accent);
-  border-radius: 8px;
+}
+
+.nav-brand:hover {
+  opacity: 0.9;
 }
 
 .nav-links {
