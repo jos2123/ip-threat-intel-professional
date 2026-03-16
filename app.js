@@ -414,6 +414,32 @@ async function blockASN(asn) {
   );
 }
 
+function unblockIP(ip) {
+  showModal(
+    'Remove from Blocklist',
+    `Are you sure you want to unblock ${ip}?`,
+    'Confirm removal',
+    async () => {
+      try {
+        const response = await fetch('/api/unblock-ip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ip })
+        });
+        const result = await response.json();
+        if (result.success) {
+          showToast(`${ip} removed from blocklist`, 'success');
+          showBlockedList(); // Refresh list
+        } else {
+          showToast(`Error: ${result.error}`, 'error');
+        }
+      } catch (error) {
+        showToast(`Error: ${error.message}`, 'error');
+      }
+    }
+  );
+}
+
 async function showBlockedList() {
   try {
     const response = await fetch('/api/blocked-list');
@@ -442,6 +468,7 @@ async function showBlockedList() {
               <div class="blocked-ip">${item.ip}</div>
               <div class="blocked-meta">Reason: ${item.reason} | ${new Date(item.timestamp).toLocaleString()}</div>
             </div>
+            <button class="btn-action danger" onclick="unblockIP('${item.ip}')">Remove</button>
           </div>
         `;
       });
