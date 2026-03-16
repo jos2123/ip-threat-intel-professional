@@ -105,18 +105,16 @@ function renderAnalyzedIP(data) {
             })}
           </div>
 
-          ${data.asnMetrics?.available ? `
+          ${data.intelligence?.cloudflare ? `
           <div class="data-card">
-            <div class="data-card-title">ASN Metrics</div>
-            ${data.asnMetrics.botVsHuman ? `
-              ${renderDataRows({
-                'Bot Traffic': data.asnMetrics.botVsHuman.bot + '%',
-                'Human Traffic': data.asnMetrics.botVsHuman.human + '%'
-              })}
-            ` : ''}
+            <div class="data-card-title">Traffic Analysis (ASN ${data.intelligence.cloudflare.asn})</div>
+            ${renderDataRows({
+              'Bot Traffic': data.intelligence.cloudflare.bot + '%',
+              'Human Traffic': data.intelligence.cloudflare.human + '%'
+            })}
             <div class="data-row">
               <span class="data-label">Source</span>
-              <span class="data-value">${data.asnMetrics.source}</span>
+              <span class="data-value">Cloudflare Radar</span>
             </div>
           </div>
           ` : ''}
