@@ -155,6 +155,7 @@ function renderAnalyzedIP(data) {
                 <span class="data-value">${new Date(data.reputation.abuseipdb.lastReported).toLocaleDateString()}</span>
               </div>
               ` : ''}
+              <a href="https://www.abuseipdb.com/check/${data.ip}" target="_blank" class="btn-action" style="margin-top: 12px; display: inline-block; text-decoration: none; text-align: center;">View Full Report</a>
             ` : '<p class="data-label">Data not available</p>'}
           </div>
 
