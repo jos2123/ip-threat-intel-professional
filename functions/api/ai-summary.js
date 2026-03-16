@@ -11,11 +11,11 @@ export async function onRequestPost(context) {
       });
     }
 
-    const prompt = `You are a cybersecurity analyst. Analyze this IP threat intelligence data and provide a brief security assessment in 3-4 sentences. Be concise and professional.
+    const prompt = `Eres un analista de ciberseguridad. Analiza estos datos de inteligencia de amenazas IP y proporciona una evaluación de seguridad breve en 3-4 oraciones. Sé conciso y profesional. Responde en español.
 
-Data: ${JSON.stringify(threatData)}
+Datos: ${JSON.stringify(threatData)}
 
-Assessment:`;
+Evaluación:`;
 
     const response = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
       prompt,
