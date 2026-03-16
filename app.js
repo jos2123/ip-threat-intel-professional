@@ -1,3 +1,31 @@
+async function getAISummary(ip, btn) {
+  const threatData = JSON.parse(btn.dataset.threat.replace(/\\'/g, "'"));
+  const summaryDiv = document.getElementById('ai-summary-' + ip.replace(/\./g, '-'));
+  
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+  
+  try {
+    const res = await fetch('/api/ai-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ threatData })
+    });
+    const data = await res.json();
+    
+    if (data.error) throw new Error(data.error);
+    
+    summaryDiv.innerHTML = `<div class="ai-summary-content"><strong>AI Analysis:</strong> ${data.summary}</div>`;
+    summaryDiv.style.display = 'block';
+    btn.textContent = 'AI Summary';
+    btn.disabled = false;
+  } catch (err) {
+    showToast('AI Error: ' + err.message, 'error');
+    btn.textContent = 'AI Summary';
+    btn.disabled = false;
+  }
+}
+
 function setActiveNav(section) {
   document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
   const links = document.querySelectorAll('.nav-links a');
@@ -177,7 +205,19 @@ function renderAnalyzedIP(data) {
         <button class="btn-action danger" onclick="blockRange100('${data.ip}')">Block /25</button>
         <button class="btn-action danger" onclick="blockSubnet('${data.ip}')">Block /24</button>
         ${data.basic?.asn ? `<button class="btn-action" onclick="blockASN('${data.basic.asn}')">Block ${data.basic.asn}</button>` : ''}
+        <button class="btn-action ai" onclick="getAISummary('${data.ip}', this)" data-threat='${JSON.stringify({
+          ip: data.ip,
+          score: data.reputation.riskScore,
+          level: data.reputation.riskLevel,
+          country: data.basic?.country,
+          asn: data.basic?.asn,
+          org: data.basic?.organization,
+          abuseScore: data.reputation.abuseipdb?.score,
+          reports: data.reputation.abuseipdb?.reports,
+          malicious: data.reputation.virustotal?.malicious
+        }).replace(/'/g, "\\'")}'>AI Summary</button>
       </div>
+      <div class="ai-summary" id="ai-summary-${data.ip.replace(/\./g, '-')}" style="display:none;"></div>
     </div>
   `;
 }
