@@ -131,10 +131,6 @@ function renderAnalyzedIP(data) {
               'Bot Traffic': data.intelligence.cloudflare.bot + '%',
               'Human Traffic': data.intelligence.cloudflare.human + '%'
             })}
-            <div class="data-row">
-              <span class="data-label">Source</span>
-              <span class="data-value">Cloudflare Radar</span>
-            </div>
           </div>
           ` : ''}
 
