@@ -58,6 +58,7 @@ async function analyzeIP(ip) {
 }
 
 function displayResults(results, ips) {
+  setActiveNav('analysis');
   const resultsDiv = document.getElementById('results');
   
   let html = `
