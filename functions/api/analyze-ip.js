@@ -77,8 +77,13 @@ async function analyzeIP(ip, env) {
         abuseipdb: {
           score: abuseData.data?.abuseConfidenceScore || 0,
           reports: abuseData.data?.totalReports || 0,
-          categories: abuseData.data?.usageType || 'Unknown',
-          isWhitelisted: abuseData.data?.isWhitelisted || false
+          isp: abuseData.data?.isp || 'Unknown',
+          usageType: abuseData.data?.usageType || 'Unknown',
+          domain: abuseData.data?.domain || 'N/A',
+          hostnames: abuseData.data?.hostnames || [],
+          isWhitelisted: abuseData.data?.isWhitelisted || false,
+          lastReported: abuseData.data?.lastReportedAt || null,
+          note: 'Reports limited to last 90 days (API Free plan)'
         },
         virustotal: {
           malicious: vtData.data?.attributes?.last_analysis_stats?.malicious || 0,

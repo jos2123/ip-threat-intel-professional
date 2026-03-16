@@ -140,11 +140,22 @@ function renderAnalyzedIP(data) {
 
           <div class="data-card">
             <div class="data-card-title">AbuseIPDB</div>
-            ${data.reputation.abuseipdb ? renderDataRows({
-              'Confidence Score': data.reputation.abuseipdb.score + '%',
-              'Total Reports': data.reputation.abuseipdb.reports,
-              'Whitelisted': data.reputation.abuseipdb.isWhitelisted ? 'Yes' : 'No'
-            }) : '<p class="data-label">Data not available</p>'}
+            ${data.reputation.abuseipdb ? `
+              ${renderDataRows({
+                'Confidence Score': data.reputation.abuseipdb.score + '%',
+                'Reports (90 days)': data.reputation.abuseipdb.reports,
+                'ISP': data.reputation.abuseipdb.isp || 'N/A',
+                'Usage Type': data.reputation.abuseipdb.usageType || 'N/A',
+                'Domain': data.reputation.abuseipdb.domain || 'N/A',
+                'Whitelisted': data.reputation.abuseipdb.isWhitelisted ? 'Yes' : 'No'
+              })}
+              ${data.reputation.abuseipdb.lastReported ? `
+              <div class="data-row">
+                <span class="data-label">Last Reported</span>
+                <span class="data-value">${new Date(data.reputation.abuseipdb.lastReported).toLocaleDateString()}</span>
+              </div>
+              ` : ''}
+            ` : '<p class="data-label">Data not available</p>'}
           </div>
 
           <div class="data-card">
