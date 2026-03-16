@@ -1,20 +1,31 @@
 // Cloudflare Pages Function - Block ASN
 export async function onRequestPost(context) {
-  const { request } = context;
+  const { request, env } = context;
   
   try {
     const { asn, reason } = await request.json();
     
-    const blockResult = {
+    const blockedASN = {
+      ip: asn,
+      reason: reason || `ASN ${asn} bloqueado`,
+      timestamp: new Date().toISOString(),
+      source: 'Manual block',
+      type: 'asn'
+    };
+    
+    let savedToKV = false;
+    if (env.BLOCKED_IPS) {
+      const key = `blocked_${asn.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      await env.BLOCKED_IPS.put(key, JSON.stringify(blockedASN));
+      savedToKV = true;
+    }
+
+    return new Response(JSON.stringify({
       success: true,
       blocked: asn,
-      type: 'asn',
-      reason: reason,
-      timestamp: new Date().toISOString(),
-      message: `ASN ${asn} bloqueado exitosamente`
-    };
-
-    return new Response(JSON.stringify(blockResult), {
+      count: 1,
+      savedToKV
+    }), {
       headers: { 
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*'
