@@ -143,7 +143,6 @@ function renderAnalyzedIP(data) {
             ${data.reputation.abuseipdb ? `
               ${renderDataRows({
                 'Confidence Score': data.reputation.abuseipdb.score + '%',
-                'Total Reports': data.reputation.abuseipdb.totalReportsAllTime || data.reputation.abuseipdb.reports,
                 'Reports (90 days)': data.reputation.abuseipdb.reports,
                 'ISP': data.reputation.abuseipdb.isp || 'N/A',
                 'Usage Type': data.reputation.abuseipdb.usageType || 'N/A',
