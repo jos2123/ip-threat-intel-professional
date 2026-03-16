@@ -207,14 +207,30 @@ function renderAnalyzedIP(data) {
         ${data.basic?.asn ? `<button class="btn-action" onclick="blockASN('${data.basic.asn}')">Block ${data.basic.asn}</button>` : ''}
         <button class="btn-action ai" onclick="getAISummary('${data.ip}', this)" data-threat='${JSON.stringify({
           ip: data.ip,
-          score: data.reputation.riskScore,
-          level: data.reputation.riskLevel,
+          riskLevel: data.reputation.riskLevel,
           country: data.basic?.country,
+          city: data.basic?.city,
           asn: data.basic?.asn,
-          org: data.basic?.organization,
-          abuseScore: data.reputation.abuseipdb?.score,
-          reports: data.reputation.abuseipdb?.reports,
-          malicious: data.reputation.virustotal?.malicious
+          organization: data.basic?.organization,
+          abuseipdb: data.reputation.abuseipdb ? {
+            reports: data.reputation.abuseipdb.reports,
+            isp: data.reputation.abuseipdb.isp,
+            usageType: data.reputation.abuseipdb.usageType,
+            domain: data.reputation.abuseipdb.domain,
+            isWhitelisted: data.reputation.abuseipdb.isWhitelisted,
+            lastReported: data.reputation.abuseipdb.lastReported
+          } : null,
+          virustotal: data.reputation.virustotal ? {
+            malicious: data.reputation.virustotal.malicious,
+            harmless: data.reputation.virustotal.harmless
+          } : null,
+          shodan: data.intelligence?.shodan ? {
+            ports: data.intelligence.shodan.ports
+          } : null,
+          cloudflare: data.intelligence?.cloudflare ? {
+            botTraffic: data.intelligence.cloudflare.bot,
+            humanTraffic: data.intelligence.cloudflare.human
+          } : null
         }).replace(/'/g, "\\'")}'>Analisis</button>
       </div>
       <div class="ai-summary" id="ai-summary-${data.ip.replace(/\./g, '-')}" style="display:none;"></div>
