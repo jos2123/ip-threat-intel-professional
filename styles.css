@@ -44,12 +44,17 @@ body {
 }
 
 .brand-icon {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
 }
 
 .nav-brand:hover {
-  opacity: 0.9;
+  opacity: 0.85;
+}
+
+.nav-brand:hover .brand-icon {
+  transform: scale(1.05);
+  transition: transform 0.2s;
 }
 
 .nav-links {
