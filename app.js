@@ -15,13 +15,13 @@ async function getAISummary(ip, btn) {
     
     if (data.error) throw new Error(data.error);
     
-    summaryDiv.innerHTML = `<div class="ai-summary-content"><strong>AI Analysis:</strong> ${data.summary}</div>`;
+    summaryDiv.innerHTML = `<div class="ai-summary-content"><strong>Analisis:</strong> ${data.summary}</div>`;
     summaryDiv.style.display = 'block';
-    btn.textContent = 'AI Summary';
+    btn.textContent = 'Analisis';
     btn.disabled = false;
   } catch (err) {
     showToast('AI Error: ' + err.message, 'error');
-    btn.textContent = 'AI Summary';
+    btn.textContent = 'Analisis';
     btn.disabled = false;
   }
 }
@@ -215,7 +215,7 @@ function renderAnalyzedIP(data) {
           abuseScore: data.reputation.abuseipdb?.score,
           reports: data.reputation.abuseipdb?.reports,
           malicious: data.reputation.virustotal?.malicious
-        }).replace(/'/g, "\\'")}'>AI Summary</button>
+        }).replace(/'/g, "\\'")}'>Analisis</button>
       </div>
       <div class="ai-summary" id="ai-summary-${data.ip.replace(/\./g, '-')}" style="display:none;"></div>
     </div>
