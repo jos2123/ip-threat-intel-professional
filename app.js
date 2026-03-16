@@ -659,7 +659,11 @@ async function generateBlocklist() {
 }
 
 function generatePDF() {
-  const resultsContent = document.getElementById('results').innerHTML;
+  const resultsDiv = document.getElementById('results');
+  const cards = resultsDiv.querySelectorAll('.ip-card');
+  let cardsHTML = '';
+  cards.forEach(card => cardsHTML += card.outerHTML);
+  
   const printWindow = window.open('', '_blank');
   
   printWindow.document.write(`
@@ -696,7 +700,7 @@ function generatePDF() {
         .reserved-notice { background: #f1f5f9; padding: 16px; border-radius: 6px; margin-bottom: 16px; }
         .reserved-notice h4 { font-size: 13px; margin-bottom: 6px; }
         .reserved-notice p { font-size: 12px; color: #64748b; }
-        .ip-card-actions, .btn-action, .btn-primary, .btn-secondary, .btn-export, .results-header button { display: none !important; }
+        .ip-card-actions, .ai-summary, .btn-action { display: none !important; }
         @media print { body { padding: 20px; } }
       </style>
     </head>
@@ -705,7 +709,7 @@ function generatePDF() {
         <h1>IP THREAT INTELLIGENCE REPORT</h1>
         <p>Generated: ${new Date().toLocaleString()} | Classification: CONFIDENTIAL</p>
       </div>
-      ${resultsContent}
+      ${cardsHTML}
     </body>
     </html>
   `);
