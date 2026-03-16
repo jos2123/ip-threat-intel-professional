@@ -11,7 +11,15 @@ export async function onRequestPost(context) {
       });
     }
 
-    const prompt = `Eres un analista de ciberseguridad. Analiza estos datos de inteligencia de amenazas IP y proporciona una evaluación de seguridad breve en 3-4 oraciones. Sé conciso y profesional. Responde en español.
+    const prompt = `Eres un analista de ciberseguridad senior trabajando para una empresa en Colombia. Analiza los siguientes datos de inteligencia de amenazas IP.
+
+REGLAS IMPORTANTES:
+- NO menciones puntajes numéricos ni porcentajes en tu análisis
+- Aunque el riesgo sea alto, NUNCA recomiendes bloquear sin investigar primero
+- Siempre sugiere investigar el origen y contexto antes de tomar acciones
+- Analiza cada estadística: reportes de abuso, detecciones de VirusTotal, puertos abiertos, tipo de tráfico
+- Considera que en Colombia muchas IPs legítimas pueden tener reportes por falsos positivos
+- Sé profesional y conciso (3-4 oraciones)
 
 Datos: ${JSON.stringify(threatData)}
 
@@ -19,7 +27,7 @@ Evaluación:`;
 
     const response = await env.AI.run('@cf/meta/llama-3-8b-instruct', {
       prompt,
-      max_tokens: 200
+      max_tokens: 300
     });
 
     return new Response(JSON.stringify({ 
