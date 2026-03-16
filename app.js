@@ -287,72 +287,126 @@ document.getElementById('ipInput').addEventListener('keypress', (e) => {
   if (e.key === 'Enter' && e.ctrlKey) analyzeIPs();
 });
 
-async function blockIP(ip) {
-  const reason = prompt('Block reason:', 'Malicious IP detected');
-  if (!reason) return;
+function showModal(title, message, placeholder, onConfirm) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.innerHTML = `
+    <div class="modal">
+      <h3>${title}</h3>
+      <p>${message}</p>
+      <input type="text" class="modal-input" placeholder="${placeholder}" value="${placeholder}">
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+        <button class="btn-confirm">Confirm Block</button>
+      </div>
+    </div>
+  `;
   
-  try {
-    const response = await fetch('/api/block-ip', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ip, reason })
-    });
-    const result = await response.json();
-    showToast(result.success ? `IP ${ip} blocked successfully` : `Error: ${result.error}`, result.success ? 'success' : 'error');
-  } catch (error) {
-    showToast(`Error: ${error.message}`, 'error');
-  }
+  document.body.appendChild(overlay);
+  
+  const input = overlay.querySelector('.modal-input');
+  input.focus();
+  input.select();
+  
+  overlay.querySelector('.btn-confirm').onclick = () => {
+    const reason = input.value.trim();
+    if (reason) {
+      overlay.remove();
+      onConfirm(reason);
+    }
+  };
+  
+  input.onkeypress = (e) => {
+    if (e.key === 'Enter') overlay.querySelector('.btn-confirm').click();
+  };
+  
+  overlay.onclick = (e) => {
+    if (e.target === overlay) overlay.remove();
+  };
+}
+
+async function blockIP(ip) {
+  showModal(
+    'Block IP Address',
+    `Block ${ip}/32 (single IP)`,
+    'Malicious IP detected',
+    async (reason) => {
+      try {
+        const response = await fetch('/api/block-ip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ip, reason })
+        });
+        const result = await response.json();
+        showToast(result.success ? `IP ${ip} blocked successfully` : `Error: ${result.error}`, result.success ? 'success' : 'error');
+      } catch (error) {
+        showToast(`Error: ${error.message}`, 'error');
+      }
+    }
+  );
 }
 
 async function blockSubnet(ip) {
-  const reason = prompt('Block reason for /24 subnet:', 'Malicious subnet detected');
-  if (!reason) return;
-  
-  try {
-    const response = await fetch('/api/block-subnet', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ip, cidr: 24, reason })
-    });
-    const result = await response.json();
-    showToast(`Subnet blocked: ${result.blocked}`, 'success');
-  } catch (error) {
-    showToast(`Error: ${error.message}`, 'error');
-  }
+  showModal(
+    'Block Subnet /24',
+    `Block ${ip.split('.').slice(0,3).join('.')}.0/24 (256 IPs)`,
+    'Malicious subnet detected',
+    async (reason) => {
+      try {
+        const response = await fetch('/api/block-subnet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ip, cidr: 24, reason })
+        });
+        const result = await response.json();
+        showToast(`Subnet blocked: ${result.blocked}`, 'success');
+      } catch (error) {
+        showToast(`Error: ${error.message}`, 'error');
+      }
+    }
+  );
 }
 
 async function blockRange100(ip) {
-  const reason = prompt('Block reason for /25 range:', 'Malicious range detected');
-  if (!reason) return;
-  
-  try {
-    const response = await fetch('/api/block-100', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ip, reason })
-    });
-    const result = await response.json();
-    showToast(`Range blocked: ${result.blocked}`, 'success');
-  } catch (error) {
-    showToast(`Error: ${error.message}`, 'error');
-  }
+  showModal(
+    'Block Range /25',
+    `Block ~128 IPs in range`,
+    'Malicious range detected',
+    async (reason) => {
+      try {
+        const response = await fetch('/api/block-100', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ip, reason })
+        });
+        const result = await response.json();
+        showToast(`Range blocked: ${result.blocked}`, 'success');
+      } catch (error) {
+        showToast(`Error: ${error.message}`, 'error');
+      }
+    }
+  );
 }
 
 async function blockASN(asn) {
-  const reason = prompt('Block reason for ASN:', `ASN ${asn} malicious activity`);
-  if (!reason) return;
-  
-  try {
-    const response = await fetch('/api/block-asn', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ asn, reason })
-    });
-    const result = await response.json();
-    showToast(`ASN ${asn} blocked: ${result.count} CIDR ranges`, 'success');
-  } catch (error) {
-    showToast(`Error: ${error.message}`, 'error');
-  }
+  showModal(
+    'Block ASN',
+    `Block all IP ranges from ${asn}`,
+    `ASN ${asn} malicious activity`,
+    async (reason) => {
+      try {
+        const response = await fetch('/api/block-asn', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ asn, reason })
+        });
+        const result = await response.json();
+        showToast(`ASN ${asn} blocked: ${result.count} CIDR ranges`, 'success');
+      } catch (error) {
+        showToast(`Error: ${error.message}`, 'error');
+      }
+    }
+  );
 }
 
 async function showBlockedList() {
