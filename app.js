@@ -1,4 +1,13 @@
+function setActiveNav(section) {
+  document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
+  const links = document.querySelectorAll('.nav-links a');
+  if (section === 'analysis') links[0].classList.add('active');
+  else if (section === 'blocked') links[1].classList.add('active');
+  else if (section === 'export') links[2].classList.add('active');
+}
+
 function goHome() {
+  setActiveNav('analysis');
   if (window.lastAnalysisResults) {
     document.getElementById('results').innerHTML = window.lastAnalysisResults;
     document.getElementById('results').style.display = 'block';
@@ -441,6 +450,7 @@ function unblockIP(ip) {
 }
 
 async function showBlockedList() {
+  setActiveNav('blocked');
   try {
     const response = await fetch('/api/blocked-list');
     const blocked = await response.json();
@@ -449,7 +459,10 @@ async function showBlockedList() {
     let html = `
       <div class="results-header">
         <h2>Blocked IP Addresses</h2>
-        <button class="btn-export" onclick="showAWSFormat()">AWS WAF Format</button>
+        <div>
+          <button class="btn-secondary" onclick="showBlockedList()" style="margin-right: 8px;">Refresh</button>
+          <button class="btn-export" onclick="showAWSFormat()">AWS WAF Format</button>
+        </div>
       </div>
     `;
     
@@ -489,6 +502,7 @@ function restoreResults() {
 }
 
 async function showAWSFormat() {
+  setActiveNav('export');
   const resultsDiv = document.getElementById('results');
   resultsDiv.innerHTML = `
     <div class="results-header">
@@ -518,6 +532,7 @@ function copyAWSList() {
 }
 
 async function generateBlocklist() {
+  setActiveNav('export');
   const input = document.getElementById('ipInput').value.trim();
   if (!input) {
     showToast('Please enter at least one IP address', 'error');
