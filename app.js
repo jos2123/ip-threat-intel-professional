@@ -55,7 +55,7 @@ async function analyzeIPs() {
     return;
   }
 
-  const ips = input.split(/[\n,]/).map(ip => ip.trim()).filter(ip => ip);
+  const ips = input.split(/[\n,]/).map(ip => ip.trim().split('/')[0]).filter(ip => ip);
 
   if (ips.length === 0) {
     showToast('No valid IP addresses found', 'error');
@@ -604,7 +604,7 @@ async function generateBlocklist() {
     return;
   }
 
-  const ips = input.split(/[\n,]/).map(ip => ip.trim()).filter(ip => ip);
+  const ips = input.split(/[\n,]/).map(ip => ip.trim().split('/')[0]).filter(ip => ip);
 
   if (ips.length === 0) {
     showToast('No valid IP addresses found', 'error');
