@@ -11,7 +11,7 @@ export async function onRequestPost(context) {
       });
     }
 
-    const prompt = `Eres un analista de ciberseguridad senior trabajando para una empresa en Colombia. Analiza los siguientes datos de inteligencia de amenazas IP.
+    const prompt = `Eres un analista de ciberseguridad senior trabajando para una empresa en Colombia. Analiza los siguientes datos de inteligencia de amenazas IP. Responde siempre en español.
 
 REGLAS IMPORTANTES:
 - NO menciones puntajes numéricos ni porcentajes en tu análisis
