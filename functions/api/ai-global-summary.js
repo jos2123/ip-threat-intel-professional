@@ -22,7 +22,7 @@ REGLAS:
 - Genera un resumen consolidado de hallazgos
 - Agrupa por nivel de riesgo (cuántas high, medium, low)
 - Menciona patrones: países más frecuentes, ISPs comunes, tipos de uso
-- Si hay IPs de LINKTIC/Tigo/Colombia Móvil, indica que son de nuestra red
+- Solo menciona LINKTIC/Tigo si alguna IP tiene ese ISP o dominio tigo.com.co
 - Identifica IPs que requieren atención inmediata vs las que son seguras
 - NO recomiendes bloquear sin investigar
 - Sé conciso pero completo (5-6 oraciones)
