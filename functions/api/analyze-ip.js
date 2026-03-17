@@ -62,6 +62,33 @@ async function analyzeIP(ip, env) {
       }
     }
 
+    // Calculate risk score considering multiple factors
+    const abuseScore = abuseData.data?.abuseConfidenceScore || 0;
+    const vtMalicious = vtData.data?.attributes?.last_analysis_stats?.malicious || 0;
+    const botTraffic = cloudflareStats?.bot || 0;
+    
+    let riskScore = abuseScore;
+    
+    // VirusTotal malicious detections
+    if (vtMalicious > 0) {
+      riskScore += Math.min(vtMalicious * 3, 30);
+    }
+    
+    // ASN Bot Traffic >= 15% adds points
+    if (botTraffic >= 70) {
+      riskScore += 35;
+    } else if (botTraffic >= 50) {
+      riskScore += 25;
+    } else if (botTraffic >= 30) {
+      riskScore += 15;
+    } else if (botTraffic >= 15) {
+      riskScore += 10;
+    }
+    
+    riskScore = Math.min(riskScore, 100);
+    
+    const riskLevel = riskScore >= 40 ? 'high' : riskScore >= 20 ? 'medium' : 'low';
+
     // Format response
     const result = {
       ip,
@@ -85,13 +112,12 @@ async function analyzeIP(ip, env) {
           lastReported: abuseData.data?.lastReportedAt || null
         },
         virustotal: {
-          malicious: vtData.data?.attributes?.last_analysis_stats?.malicious || 0,
+          malicious: vtMalicious,
           suspicious: vtData.data?.attributes?.last_analysis_stats?.suspicious || 0,
           harmless: vtData.data?.attributes?.last_analysis_stats?.harmless || 0
         },
-        riskLevel: abuseData.data?.abuseConfidenceScore > 50 ? 'high' : 
-                   abuseData.data?.abuseConfidenceScore > 25 ? 'medium' : 'low',
-        riskScore: abuseData.data?.abuseConfidenceScore || 0
+        riskLevel,
+        riskScore
       },
       intelligence: {
         shodan: shodanData ? {
