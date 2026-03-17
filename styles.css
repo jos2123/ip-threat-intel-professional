@@ -663,6 +663,30 @@ body {
   border-left: 3px solid #8b5cf6;
 }
 
+/* Global AI Summary */
+.global-ai-summary {
+  margin: 16px 0 24px 0;
+}
+.global-ai-content {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, #f5f3ff, #ede9fe);
+  padding: 20px 24px;
+  border-radius: 12px;
+  border-left: 4px solid #8b5cf6;
+}
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.results-header div {
+  display: flex;
+  gap: 12px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .navbar { padding: 0 20px; }

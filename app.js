@@ -26,6 +26,52 @@ async function getAISummary(ip, btn) {
   }
 }
 
+async function getGlobalAISummary() {
+  const btn = document.getElementById('globalAiBtn');
+  const summaryDiv = document.getElementById('global-ai-summary');
+  
+  if (!window.allAnalysisData || window.allAnalysisData.length === 0) {
+    showToast('No hay datos para analizar', 'error');
+    return;
+  }
+  
+  btn.disabled = true;
+  btn.textContent = 'Analizando...';
+  
+  const allData = window.allAnalysisData.map(d => ({
+    ip: d.ip,
+    riskLevel: d.reputation?.riskLevel,
+    country: d.basic?.country,
+    org: d.basic?.organization,
+    asn: d.basic?.asn,
+    abuseReports: d.reputation?.abuseipdb?.reports,
+    isp: d.reputation?.abuseipdb?.isp,
+    usageType: d.reputation?.abuseipdb?.usageType,
+    malicious: d.reputation?.virustotal?.malicious,
+    botTraffic: d.intelligence?.cloudflare?.bot
+  }));
+  
+  try {
+    const res = await fetch('/api/ai-global-summary', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ allData })
+    });
+    const data = await res.json();
+    
+    if (data.error) throw new Error(data.error);
+    
+    summaryDiv.innerHTML = `<div class="global-ai-content"><strong>Analisis Global (${allData.length} IPs):</strong><br><br>${data.summary}</div>`;
+    summaryDiv.style.display = 'block';
+    btn.textContent = 'Analisis Global';
+    btn.disabled = false;
+  } catch (err) {
+    showToast('AI Error: ' + err.message, 'error');
+    btn.textContent = 'Analisis Global';
+    btn.disabled = false;
+  }
+}
+
 function setActiveNav(section) {
   document.querySelectorAll('.nav-links a').forEach(a => a.classList.remove('active'));
   const links = document.querySelectorAll('.nav-links a');
@@ -89,11 +135,18 @@ function displayResults(results, ips) {
   setActiveNav('analysis');
   const resultsDiv = document.getElementById('results');
   
+  // Guardar datos para análisis global
+  window.allAnalysisData = results.map((r, i) => r.status === 'fulfilled' ? r.value : null).filter(Boolean);
+  
   let html = `
     <div class="results-header">
       <h2>Analysis Results (${ips.length} IPs)</h2>
-      <button class="btn-export" onclick="generatePDF()">Export Report</button>
+      <div>
+        ${ips.length > 1 ? `<button class="btn-action ai" onclick="getGlobalAISummary()" id="globalAiBtn">Analisis Global</button>` : ''}
+        <button class="btn-export" onclick="generatePDF()">Export Report</button>
+      </div>
     </div>
+    <div class="global-ai-summary" id="global-ai-summary" style="display:none;"></div>
   `;
 
   results.forEach((result, index) => {
